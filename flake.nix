@@ -36,7 +36,7 @@
       };
 
       devShells.${system}.default = pkgs.mkShell rec {
-        packages = [ rust ];
+        packages = [ rust pkgs.sqlite ];
       };
     };
 }

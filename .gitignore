@@ -1,5 +1,8 @@
 /target
 
+.env
+
 .envrc
 .direnv
+
 result/
