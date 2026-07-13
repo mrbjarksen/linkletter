@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use url::Url;
 
 #[derive(Clone, serde::Deserialize)]
-pub(crate) struct ServiceSettings {
+pub(crate) struct Settings {
     pub(crate) address: AddressSettings,
     pub(crate) database: DatabaseSettings,
     pub(crate) api: ApiSettings,
@@ -27,7 +27,7 @@ pub(crate) struct ApiSettings {
     pub(crate) host_url: Url,
 }
 
-impl ServiceSettings {
+impl Settings {
     pub(crate) fn new() -> Result<Self, ConfigError> {
         let run_mode = std::env::var("LL_RUN_MODE").unwrap_or_else(|_| "dev".into());
         let config_dir = std::env::var("LL_CONFIG_DIR").unwrap_or_else(|_| "./config".into());
