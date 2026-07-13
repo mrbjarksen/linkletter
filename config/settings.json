@@ -1,0 +1,13 @@
+{
+    "address": {
+        "ip": "127.0.0.1",
+        "port": 8080
+    },
+    "database": {
+        "url": "sqlite::memory:",
+        "migrations": "./db/migrations"
+    },
+    "api": {
+        "host_url": "http:/localhost:8080/"
+    }
+}

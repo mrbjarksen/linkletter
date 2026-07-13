@@ -1,39 +1,63 @@
-use std::net::SocketAddr;
-use std::str::FromStr;
+mod settings;
 
+use axum::extract::{ConnectInfo, Path, State};
+use axum::http::StatusCode;
 use axum::{
     Router,
-    extract::{ConnectInfo, Path, State},
-    http::StatusCode,
     response::Redirect,
     routing::{get, post},
 };
 use hyper::{HeaderMap, header::USER_AGENT};
-use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool};
 use url::Url;
+
+use sqlx::ConnectOptions;
+use sqlx::migrate::Migrator;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
 use uuid::Uuid;
+
+use std::net::SocketAddr;
+
+use crate::settings::{ApiSettings, ServiceSettings};
+
+#[derive(Clone)]
+struct ServiceState {
+    settings: ApiSettings,
+    pool: SqlitePool,
+}
+
+impl axum::extract::FromRef<ServiceState> for SqlitePool {
+    fn from_ref(state: &ServiceState) -> Self {
+        state.pool.clone()
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Open or create SQLite database in WAL-mode
-    let opts = SqliteConnectOptions::from_str("sqlite::memory:")?
-        .journal_mode(SqliteJournalMode::Wal)
+    let settings = ServiceSettings::new()?;
+
+    let opts = SqliteConnectOptions::from_url(&settings.database.url)?
         .create_if_missing(true)
         .optimize_on_close(true, None);
     let pool = SqlitePool::connect_with(opts).await?;
 
     // Make sure database schema is up to date
-    sqlx::migrate!("db/migrations").run(&pool).await?;
+    if let Some(migrations_source) = settings.database.migrations {
+        Migrator::new(migrations_source).await?.run(&pool).await?;
+    }
 
     // Set up service endpoints
     let app = Router::new()
         .route("/documents", post(process_document))
         .route("/visit/{url_id}", get(process_visit))
-        .with_state(pool)
+        .with_state(ServiceState {
+            settings: settings.api,
+            pool: pool,
+        })
         .into_make_service_with_connect_info::<SocketAddr>();
 
     // Start service
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
+    let service_address = (settings.address.ip, settings.address.port);
+    let listener = tokio::net::TcpListener::bind(service_address).await?;
     axum::serve(listener, app).await?;
 
     Ok(())
@@ -41,12 +65,12 @@ async fn main() -> anyhow::Result<()> {
 
 #[axum::debug_handler]
 async fn process_document(
-    State(pool): State<SqlitePool>,
+    State(state): State<ServiceState>,
     content: String,
 ) -> Result<String, StatusCode> {
     let doc_id = Uuid::now_v7();
 
-    let mut transaction = pool.begin().await.map_err(|err| {
+    let mut transaction = state.pool.begin().await.map_err(|err| {
         eprintln!("[ERROR] Could not open transaction: {err}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
@@ -66,7 +90,6 @@ async fn process_document(
     match Url::parse(&content) {
         Ok(_) => {
             let url_id = Uuid::new_v4();
-            let url = format!("http://localhost:3000/visit/{}", url_id.simple());
 
             sqlx::query!(
                 "INSERT INTO url(url_id, doc_id, index_in_doc, url) VALUES($1, $2, $3, $4)",
@@ -86,6 +109,15 @@ async fn process_document(
                 .commit()
                 .await
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+            let url = state
+                .settings
+                .host_url
+                .join(&format!("/visit/{}", url_id.simple()))
+                .map_err(|err| {
+                    eprintln!("[ERROR] Could not parse URL from config: {err}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
 
             Ok(url.into())
         }
@@ -140,8 +172,8 @@ async fn process_visit(
     Ok(Redirect::temporary(url.as_str()))
 }
 
-// Safely get the `User-Agent` header value as a string slice.
-// Returns `None` if `User-Agent` is not present or cannot be parsed.
+/// Safely get the `User-Agent` header value as a string slice.
+/// Returns `None` if `User-Agent` is not present or cannot be parsed.
 fn get_user_agent(header: &HeaderMap) -> Option<&str> {
     header
         .get(USER_AGENT)

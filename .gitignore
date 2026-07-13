@@ -6,3 +6,5 @@
 .direnv
 
 result/
+
+db/test.db

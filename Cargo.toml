@@ -13,5 +13,5 @@ hyper = "1.10.1"
 serde = "1.0.228"
 sqlx = { version = "0.9.0", features = ["macros", "migrate", "runtime-tokio", "sqlite"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
-url = "2.5.8"
+url = { version = "2.5.8", features = ["serde"] }
 uuid = { version = "1.23.4", features = ["serde", "std", "v4", "v7"] }

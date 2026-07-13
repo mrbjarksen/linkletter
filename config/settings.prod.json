@@ -1,0 +1,13 @@
+{
+    "address": {
+        "ip": "0.0.0.0",
+        "port": 8080
+    },
+    "database": {
+        "url": "sqlite:///var/lib/linkletter/prod.db",
+        "migrations": "/var/lib/linkletter/migrations"
+    },
+    "api": {
+        "host_url": "https://mrbjarksen.github.io/linkletter/"
+    }
+}
