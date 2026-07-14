@@ -1,7 +1,11 @@
 [package]
 name = "linkletter"
+description = "URL replacement and analytics service"
 version = "0.1.0"
 edition = "2024"
+repository = "https://github.com/mrbjarksen/linkletter"
+license = "GPL-2.0-only"
+keywords = ["service", "url", "analytics"]
 
 [dependencies]
 anyhow = "1.0.103"

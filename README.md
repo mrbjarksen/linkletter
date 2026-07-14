@@ -100,8 +100,16 @@ which should include the following:
 
 ### Installation
 
-This project is not currently available from any package repository.
-To build from source using Cargo:
+This software can be installed using [Cargo](https://doc.rust-lang.org/stable/cargo/),
+from the [crates.io](https://crates.io/) registry.
+
+```
+$ cargo install a-puzzle-a-day
+```
+
+This will place the executable `linkletter` into `$HOME/.cargo/bin` (by default), which should be added to `$PATH`.
+
+Alternatively, to build from source:
 
 ```
 $ git clone https://github.com/mrbjarksen/linkletter
