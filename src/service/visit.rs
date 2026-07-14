@@ -2,11 +2,12 @@ use axum::extract::{ConnectInfo, Path, State};
 use axum::http::StatusCode;
 use axum::response::Redirect;
 
+use crate::service;
 use crate::database;
 
 /// Process visit and reroute to expected URL
 pub(crate) async fn process(
-    State(state): State<super::State>,
+    State(state): State<service::State>,
     Path(url_id_simple): Path<uuid::fmt::Simple>,
     ConnectInfo(visitor_ip_addr): ConnectInfo<std::net::SocketAddr>,
     header: hyper::HeaderMap,
@@ -19,7 +20,7 @@ pub(crate) async fn process(
         .await
         .map_err(|err| match err {
             sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
-            _ => super::server_error(err, "Could not fetch URL"),
+            _ => service::server_error(err, "Could not fetch URL"),
         })?;
 
     // Log visit information into database asynchronously,

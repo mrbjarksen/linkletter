@@ -43,3 +43,23 @@ where
         source: Box::new(err),
     })
 }
+
+#[derive(sqlx::FromRow)]
+pub(crate) struct UrlInfo {
+    #[sqlx(try_from = "Vec<u8>")]
+    pub(crate) url_id: Uuid,
+    #[sqlx(try_from = "&'a str")]
+    pub(crate) url: Url,
+}
+
+pub(crate) async fn fetch_all_in_doc<'e, E>(doc_id: &Uuid, executor: E) -> sqlx::Result<Vec<UrlInfo>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
+    sqlx::query_as(
+        "SELECT url_id, url FROM url WHERE doc_id = $1",
+    )
+    .bind(doc_id.as_bytes().as_slice())
+    .fetch_all(executor)
+    .await
+}

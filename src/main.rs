@@ -19,8 +19,10 @@ async fn main() -> anyhow::Result<()> {
     // Set up service endpoints
     let app = Router::new()
         .route("/documents", post(service::documents::process))
+        .route("/documents/{doc_id}/urls", get(service::documents::urls))
         .route("/documents/{doc_id}/visits", get(service::documents::visits))
         .route("/documents/{doc_id}/analytics", get(service::documents::analytics))
+        .route("/urls/{url_id}", get(service::urls::get))
         .route("/urls/{url_id}/visits", get(service::urls::visits))
         .route("/visit/{url_id}", get(service::visit::process))
         .with_state(state)

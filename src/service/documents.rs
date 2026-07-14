@@ -4,10 +4,13 @@ use axum::http::StatusCode;
 use linkify::{LinkFinder, LinkKind};
 use url::Url;
 
+use crate::service;
 use crate::database;
 
+mod urls;
 mod visits;
 mod analytics;
+pub(crate) use self::urls::*;
 pub(crate) use self::visits::*;
 pub(crate) use self::analytics::*;
 
@@ -19,18 +22,18 @@ pub(crate) struct ProcessResponse {
 
 /// Process a document and return it back with URLs replaced.
 pub(crate) async fn process(
-    State(state): State<super::State>,
+    State(state): State<service::State>,
     content: String,
 ) -> Result<Json<ProcessResponse>, StatusCode> {
     // Start a database transaction, as multiple records will be inserted
     let mut transaction = state.pool.begin()
         .await
-        .map_err(|err| super::server_error(err, "Could not open transaction"))?;
+        .map_err(|err| service::server_error(err, "Could not open transaction"))?;
 
     // First persist the document (since `doc_id` is a foreign key in `url`)
     let doc_id = database::document::persist(&content, &mut *transaction)
         .await
-        .map_err(|err| super::server_error(err, "Could not persist document"))?;
+        .map_err(|err| service::server_error(err, "Could not persist document"))?;
 
     // Then find, persist and replace all URLs in document content.
     // NOTE ON PERFORMANCE:
@@ -53,11 +56,11 @@ pub(crate) async fn process(
         }
 
         let url = Url::parse(span.as_str())
-            .map_err(|err| super::server_error(err, "Libraries do not agree on URL validity"))?;
+            .map_err(|err| service::server_error(err, "Libraries do not agree on URL validity"))?;
 
         let url_id = database::url::persist(&url, &doc_id, cur_index, &mut *transaction)
             .await
-            .map_err(|err| super::server_error(err, "Could not persist URL"))?;
+            .map_err(|err| service::server_error(err, "Could not persist URL"))?;
 
         let new_url = state.settings.host_url
             .join(&format!("/visit/{}", url_id.simple()))
@@ -69,7 +72,7 @@ pub(crate) async fn process(
 
     transaction.commit()
         .await
-        .map_err(|err| super::server_error(err, "Could not commit transaction"))?;
+        .map_err(|err| service::server_error(err, "Could not commit transaction"))?;
 
     Ok(Json(ProcessResponse {
         id: doc_id.simple(),
