@@ -1,3 +1,4 @@
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use linkify::{LinkFinder, LinkKind};
@@ -5,12 +6,17 @@ use url::Url;
 
 use crate::database;
 
+#[derive(serde::Serialize)]
+pub(crate) struct ProcessResponse {
+    id: uuid::fmt::Simple,
+    replacement: String,
+}
+
 /// Process a document and return it back with URLs replaced.
-#[axum::debug_handler]
 pub(crate) async fn process(
     State(state): State<super::State>,
     content: String,
-) -> Result<String, StatusCode> {
+) -> Result<Json<ProcessResponse>, StatusCode> {
     // Start a database transaction, as multiple records will be inserted
     let mut transaction = state.pool.begin()
         .await
@@ -60,5 +66,8 @@ pub(crate) async fn process(
         .await
         .map_err(|err| super::server_error(err, "Could not commit transaction"))?;
 
-    Ok(new_content)
+    Ok(Json(ProcessResponse {
+        id: doc_id.simple(),
+        replacement: new_content
+    }))
 }
