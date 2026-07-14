@@ -26,7 +26,7 @@ pub(crate) struct Analytics {
     #[sqlx(try_from = "i64")]
     pub(crate) visit_count: u64,
     pub(crate) first_visit: Option<time::PrimitiveDateTime>,
-    pub(crate) last_visit: Option<time::PrimitiveDateTime>,
+    pub(crate) latest_visit: Option<time::PrimitiveDateTime>,
 }
 
 pub(crate) async fn get_analytics<'e, E>(doc_id: &Uuid, executor: E) -> sqlx::Result<Vec<Analytics>>
@@ -39,7 +39,7 @@ where
             url.url_id,
             COUNT(visit_id) AS visit_count,
             MIN(visit_timestamp) AS first_visit,
-            MAX(visit_timestamp) AS last_visit
+            MAX(visit_timestamp) AS latest_visit
         FROM url
         LEFT JOIN visit ON visit.url_id = url.url_id
         WHERE url.doc_id = $1

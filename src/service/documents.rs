@@ -15,6 +15,7 @@ pub(crate) use self::visits::*;
 pub(crate) use self::analytics::*;
 
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ProcessResponse {
     id: uuid::fmt::Simple,
     replacement: String,

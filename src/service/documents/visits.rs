@@ -10,7 +10,7 @@ pub(crate) type VisitsResponse = Vec<VisitsResult>;
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct VisitsResult {
-    url_id: uuid::fmt::Simple,
+    id: uuid::fmt::Simple,
     #[serde(with = "time::serde::rfc3339")]
     timestamp: time::OffsetDateTime,
     ip_addr: Option<std::net::SocketAddr>,
@@ -20,7 +20,7 @@ pub(crate) struct VisitsResult {
 impl From<&database::visit::Visit> for VisitsResult {
     fn from(visit: &database::visit::Visit) -> Self {
         Self {
-            url_id: visit.url_id.simple(),
+            id: visit.url_id.simple(),
             timestamp: visit.visit_timestamp.assume_utc(),
             ip_addr: visit.visitor_ip_addr,
             user_agent: visit.visitor_user_agent.clone(),

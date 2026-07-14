@@ -10,21 +10,21 @@ pub(crate) type AnalyticsResponse = Vec<AnalyticsResult>;
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AnalyticsResult {
-    url_id: uuid::fmt::Simple,
+    id: uuid::fmt::Simple,
     visit_count: u64,
     #[serde(with = "time::serde::rfc3339::option")]
     first_visit: Option<time::OffsetDateTime>,
     #[serde(with = "time::serde::rfc3339::option")]
-    last_visit: Option<time::OffsetDateTime>,
+    latest_visit: Option<time::OffsetDateTime>,
 }
 
 impl From<&database::document::Analytics> for AnalyticsResult {
     fn from(analytics: &database::document::Analytics) -> Self {
         Self {
-            url_id: analytics.url_id.simple(),
+            id: analytics.url_id.simple(),
             visit_count: analytics.visit_count,
             first_visit: analytics.first_visit.map(time::PrimitiveDateTime::assume_utc),
-            last_visit: analytics.last_visit.map(time::PrimitiveDateTime::assume_utc),
+            latest_visit: analytics.latest_visit.map(time::PrimitiveDateTime::assume_utc),
         }
     }
 }
