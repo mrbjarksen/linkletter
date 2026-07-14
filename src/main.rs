@@ -18,10 +18,10 @@ async fn main() -> anyhow::Result<()> {
 
     // Set up service endpoints
     let app = Router::new()
-        .route("/documents", post(service::document::process))
-        .route("/documents/{doc_id}/analytics", get(service::document::analytics))
-        .route("/documents/{doc_id}/visits", get(service::document::visits))
-        .route("/urls/{url_id}/visits", get(service::url::visits))
+        .route("/documents", post(service::documents::process))
+        .route("/documents/{doc_id}/visits", get(service::documents::visits))
+        .route("/documents/{doc_id}/analytics", get(service::documents::analytics))
+        .route("/urls/{url_id}/visits", get(service::urls::visits))
         .route("/visit/{url_id}", get(service::visit::process))
         .with_state(state)
         .into_make_service_with_connect_info::<std::net::SocketAddr>();

@@ -1,5 +1,5 @@
-pub(super) mod document;
-pub(super) mod url;
+pub(super) mod documents;
+pub(super) mod urls;
 pub(super) mod visit;
 
 use hyper::StatusCode;
