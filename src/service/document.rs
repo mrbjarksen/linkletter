@@ -1,10 +1,12 @@
 use axum::extract::State;
 use axum::http::StatusCode;
+use linkify::{LinkFinder, LinkKind};
 use url::Url;
 
 use crate::database;
 
 /// Process a document and return it back with URLs replaced.
+#[axum::debug_handler]
 pub(crate) async fn process(
     State(state): State<super::State>,
     content: String,
@@ -19,28 +21,44 @@ pub(crate) async fn process(
         .await
         .map_err(|err| super::server_error(err, "Could not persist document"))?;
 
-    // Then persist each URL in the document sequentially
-    match Url::parse(&content) {
-        Ok(url) => {
-            let url_id = database::url::persist(&url, &doc_id, 0, &mut *transaction)
-                .await
-                .map_err(|err| super::server_error(err, "Could not persist URL"))?;
+    // Then find, persist and replace all URLs in document content.
+    // NOTE ON PERFORMANCE:
+    // This should ideally be implemented using e.g. `tokio_stream`
+    // instead of collecting spans into memory before processing,
+    // and URLs should further be persisted concurrently instead of sequentially.
+    let mut new_content = String::with_capacity(content.capacity());
+    let mut cur_index: u16 = 0;
 
-            transaction.commit()
-                .await
-                .map_err(|err| super::server_error(err, "Could not commit transaction"))?;
+    let spans = LinkFinder::new()
+        .kinds(&[LinkKind::Url])
+        .spans(&content)
+        .collect::<Vec<_>>();
 
-            let new_url = state.settings.host_url.join(&format!("/visit/{}", url_id.simple()))
-                .map_err(|err| super::server_error(err, "Could not parse URL from config"))?;
-
-            Ok(new_url.into())
+    for span in spans {
+        // Append span text wholesale if it is not an URL
+        if span.kind() != Some(&LinkKind::Url) {
+            new_content.push_str(span.as_str());
+            continue;
         }
-        Err(_) => {
-            transaction.commit()
-                .await
-                .map_err(|err| super::server_error(err, "Could not commit transaction"))?;
 
-            Ok(content)
-        }
+        let url = Url::parse(span.as_str())
+            .map_err(|err| super::server_error(err, "Libraries do not agree on URL validity"))?;
+
+        let url_id = database::url::persist(&url, &doc_id, cur_index, &mut *transaction)
+            .await
+            .map_err(|err| super::server_error(err, "Could not persist URL"))?;
+
+        let new_url = state.settings.host_url
+            .join(&format!("/visit/{}", url_id.simple()))
+            .expect("host_url and `/visit/{url_id}` known to be valid");
+
+        new_content.push_str(new_url.as_str());
+        cur_index += 1
     }
+
+    transaction.commit()
+        .await
+        .map_err(|err| super::server_error(err, "Could not commit transaction"))?;
+
+    Ok(new_content)
 }
