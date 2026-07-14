@@ -1,10 +1,9 @@
 /target
+/result
 
 .env
 
 .envrc
 .direnv
-
-result/
 
 db/test.db

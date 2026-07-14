@@ -26,6 +26,8 @@
           src = ./.;
           cargoLock.lockFile = ./Cargo.lock;
 
+          DATABASE_URL = "sqlite://db/schema.db";
+
           meta = {
             description = "URL replacement and analytics service";
             homepage = "https://github.com/mrbjarksen/linkletter";
